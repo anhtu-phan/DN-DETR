@@ -38,7 +38,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     print_freq = 10
 
     _cnt = 0
-
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header, logger=logger):
 
         samples = samples.to(device)
@@ -46,11 +45,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
         with torch.cuda.amp.autocast(enabled=args.amp):
             if need_tgt_for_training:
-                dn_args=(targets, args.scalar, args.label_noise_scale, args.box_noise_scale, args.num_patterns)
-                if args.contrastive is not False:
-                    dn_args += (args.contrastive,)
-
-                outputs, mask_dict = model(samples, dn_args=dn_args)
+                outputs, mask_dict = model(samples, dn_args=(targets, args.scalar, args.label_noise_scale,
+                                                             args.box_noise_scale, args.num_patterns))
                 loss_dict = criterion(outputs, targets, mask_dict)
             else:
                 outputs = model(samples)
@@ -86,7 +82,6 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             scaler.update()
         else:
             # original backward function
-            optimizer.zero_grad()
             losses.backward()
             if max_norm > 0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm)
@@ -265,7 +260,19 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
     stats = {k: meter.global_avg for k, meter in metric_logger.meters.items() if meter.count > 0}
     if coco_evaluator is not None:
         if 'bbox' in postprocessors.keys():
-            stats['coco_eval_bbox'] = coco_evaluator.coco_eval['bbox'].stats.tolist()
+            coco_eval_bbox = coco_evaluator.coco_eval['bbox'].stats.tolist()
+            stats['AP_50_95_all_100'] = coco_eval_bbox[0]
+            stats['AP_50_all_100'] = coco_eval_bbox[1]
+            stats['AP_75_all_100'] = coco_eval_bbox[2]
+            stats['AP_50_95_small_100'] = coco_eval_bbox[3]
+            stats['AP_50_95_medium_100'] = coco_eval_bbox[4]
+            stats['AP_50_95_large_100'] = coco_eval_bbox[5]
+            stats['AR_50_95_all_1'] = coco_eval_bbox[6]
+            stats['AR_50_95_all_10'] = coco_eval_bbox[7]
+            stats['AR_50_95_all_100'] = coco_eval_bbox[8]
+            stats['AR_50_95_small_100'] = coco_eval_bbox[9]
+            stats['AR_50_95_medium_100'] = coco_eval_bbox[10]
+            stats['AR_50_95_large_100'] = coco_eval_bbox[11]
         if 'segm' in postprocessors.keys():
             stats['coco_eval_masks'] = coco_evaluator.coco_eval['segm'].stats.tolist()
     if panoptic_res is not None:
