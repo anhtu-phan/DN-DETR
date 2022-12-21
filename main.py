@@ -204,7 +204,7 @@ def build_model_main(args):
 
 
 def main(args):
-    wandb.init(name=args.wandb_name, project="detr-object-detection")
+    wandb.init(name=args.wandb_name, project=args.wandb_project_name)
     utils.init_distributed_mode(args)
     # torch.autograd.set_detect_anomaly(True)
     
@@ -426,6 +426,8 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DETR training and evaluation script', parents=[get_args_parser()])
     parser.add_argument('--wandb_name', required=True, help="wandb name")
+    parser.add_argument('--wandb_project_name', required=True, help="wandb name")
+    parser.add_argument('--num_classes', default=None, help="number of classes")
     args = parser.parse_args()
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
